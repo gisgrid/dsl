@@ -1,0 +1,97 @@
+spec_version: "0.1"
+decision_strategy:
+  id: card_fraud_rule_model_demo
+  name: Card Fraud Rule and Model Decision
+  description: Decline known fraudulent merchant or device transactions. Otherwise invoke the in-house card fraud model and decide by score bands.
+input:
+  event_type: card_transaction
+  event_time_field: transaction_time
+entities:
+  merchant:
+    key_field: merchant_id
+  device:
+    key_field: device_id
+resources:
+  lists:
+    - id: fraudulent_merchant_list
+      type: blacklist
+      lookup_key: merchant_id
+      version: demo-v1
+      on_lookup_error: REFER
+    - id: fraudulent_device_list
+      type: blacklist
+      lookup_key: device_id
+      version: demo-v1
+      on_lookup_error: REFER
+  models:
+    - id: card_fraud_detection_model
+      name: In-house Card Fraud Detection Model
+      version: demo-v1
+      output:
+        field: fraud_score
+        type: integer
+        minimum: 0
+        maximum: 999
+      on_inference_error: REFER
+decision_flow:
+  mode: first_match
+  steps:
+    - id: check_fraudulent_merchant
+      type: list_match
+      list_ref: fraudulent_merchant_list
+      input_field: merchant_id
+      when_matched:
+        decision: DECLINE
+        reason_code: FRAUDULENT_MERCHANT_MATCH
+        explanation: Merchant is present in the known fraudulent merchant list.
+        stop: true
+    - id: check_fraudulent_device
+      type: list_match
+      list_ref: fraudulent_device_list
+      input_field: device_id
+      when_matched:
+        decision: DECLINE
+        reason_code: FRAUDULENT_DEVICE_MATCH
+        explanation: Device is present in the known fraudulent device list.
+        stop: true
+    - id: invoke_card_fraud_model
+      type: model_inference
+      model_ref: card_fraud_detection_model
+      output_field: fraud_score
+    - id: decline_high_score
+      type: score_band
+      score_field: fraud_score
+      range:
+        min: 900
+        max: 999
+        include_min: true
+        include_max: true
+      decision: DECLINE
+      reason_code: MODEL_SCORE_DECLINE
+      explanation: Model fraud score is between 900 and 999.
+      stop: true
+    - id: refer_medium_high_score
+      type: score_band
+      score_field: fraud_score
+      range:
+        min: 800
+        max: 899
+        include_min: true
+        include_max: true
+      decision: REFER
+      reason_code: MODEL_SCORE_REFER
+      explanation: Model fraud score is between 800 and 899.
+      stop: true
+    - id: approve_default
+      type: default
+      decision: APPROVE
+      reason_code: MODEL_SCORE_APPROVE
+      explanation: No blacklist match and model score is below 800.
+      stop: true
+outputs:
+  - decision
+  - reason_code
+  - explanation
+  - fraud_score
+  - matched_step_id
+  - strategy_version

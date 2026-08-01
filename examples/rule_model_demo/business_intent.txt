@@ -1,0 +1,9 @@
+Decline the transaction immediately if the merchant is on the known fraudulent merchant list
+or if the device ID is on the known fraudulent device list.
+
+Otherwise, score the transaction using our in-house Card Fraud Detection model.
+The model returns a score from 0 to 999.
+
+Decline the transaction when the score is between 900 and 999.
+Refer the transaction for review when the score is between 800 and 899.
+Otherwise, approve the transaction.

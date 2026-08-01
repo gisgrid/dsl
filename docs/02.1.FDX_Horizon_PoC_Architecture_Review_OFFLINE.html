@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FDX Horizon PoC：四层架构梳理与下一步建议</title>
+  <style>
+    :root{
+      --bg:#f5f7fb;
+      --paper:#ffffff;
+      --text:#1f2937;
+      --muted:#667085;
+      --line:#d9e0ea;
+      --blue:#175cd3;
+      --blue-soft:#eff6ff;
+      --gold:#b54708;
+      --gold-soft:#fff7ed;
+      --green:#027a48;
+      --green-soft:#ecfdf3;
+      --purple:#6941c6;
+      --purple-soft:#f4f3ff;
+      --red:#b42318;
+      --red-soft:#fff1f3;
+      --code:#101828;
+      --shadow:0 12px 34px rgba(16,24,40,.08);
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:"Segoe UI","Microsoft YaHei","PingFang SC","Noto Sans CJK SC",Arial,sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      line-height:1.72;
+    }
+    .page{
+      max-width:1100px;
+      margin:36px auto;
+      background:var(--paper);
+      box-shadow:var(--shadow);
+      border:1px solid var(--line);
+      border-radius:18px;
+      overflow:hidden;
+    }
+    header{
+      padding:48px 56px 34px;
+      background:linear-gradient(135deg,#eef5ff 0%,#f8fbff 55%,#fff9f2 100%);
+      border-bottom:1px solid var(--line);
+    }
+    .eyebrow{
+      color:var(--blue);
+      font-weight:700;
+      letter-spacing:.08em;
+      font-size:13px;
+      text-transform:uppercase;
+    }
+    h1{
+      margin:10px 0 12px;
+      font-size:36px;
+      line-height:1.24;
+      color:#101828;
+    }
+    .subtitle{
+      max-width:840px;
+      color:#475467;
+      font-size:18px;
+      margin:0;
+    }
+    .meta{
+      margin-top:20px;
+      color:var(--muted);
+      font-size:14px;
+    }
+    main{padding:40px 56px 56px}
+    nav{
+      background:#fbfcfe;
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:22px 26px;
+      margin-bottom:36px;
+    }
+    nav strong{display:block;margin-bottom:8px}
+    nav a{
+      color:var(--blue);
+      text-decoration:none;
+      margin-right:18px;
+      white-space:nowrap;
+      display:inline-block;
+      padding:3px 0;
+    }
+    nav a:hover{text-decoration:underline}
+    h2{
+      margin:46px 0 16px;
+      padding-bottom:8px;
+      border-bottom:2px solid #e8edf5;
+      color:#101828;
+      font-size:27px;
+    }
+    h3{
+      margin:30px 0 10px;
+      color:#1d2939;
+      font-size:21px;
+    }
+    h4{
+      margin:22px 0 8px;
+      color:#344054;
+      font-size:17px;
+    }
+    p{margin:10px 0}
+    ul,ol{padding-left:24px}
+    li{margin:6px 0}
+    .lead{
+      font-size:18px;
+      color:#344054;
+      border-left:5px solid var(--blue);
+      background:var(--blue-soft);
+      padding:16px 20px;
+      border-radius:0 12px 12px 0;
+      margin:0 0 28px;
+    }
+    .callout{
+      border:1px solid var(--line);
+      border-left:5px solid var(--blue);
+      background:#fbfdff;
+      padding:16px 20px;
+      border-radius:12px;
+      margin:18px 0;
+    }
+    .callout.gold{border-left-color:var(--gold);background:var(--gold-soft)}
+    .callout.green{border-left-color:var(--green);background:var(--green-soft)}
+    .callout.purple{border-left-color:var(--purple);background:var(--purple-soft)}
+    .callout.red{border-left-color:var(--red);background:var(--red-soft)}
+    .quote{
+      font-size:18px;
+      color:#344054;
+      margin:18px 0;
+      padding:14px 20px;
+      border-left:4px solid #98a2b3;
+      background:#f9fafb;
+      font-style:italic;
+    }
+    pre{
+      background:var(--code);
+      color:#f2f4f7;
+      padding:18px 20px;
+      border-radius:12px;
+      overflow:auto;
+      line-height:1.55;
+      font-family:Consolas,"SFMono-Regular",Menlo,monospace;
+      font-size:14px;
+      white-space:pre-wrap;
+    }
+    code{
+      background:#f2f4f7;
+      color:#344054;
+      border-radius:5px;
+      padding:2px 6px;
+      font-family:Consolas,"SFMono-Regular",Menlo,monospace;
+      font-size:.94em;
+    }
+    pre code{background:transparent;color:inherit;padding:0}
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:16px;
+      margin:18px 0;
+    }
+    .card{
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:20px;
+      background:#fff;
+    }
+    .card h3,.card h4{margin-top:0}
+    .layer{
+      border-top:5px solid var(--blue);
+    }
+    .layer.l2{border-top-color:#d4a72c}
+    .layer.l3{border-top-color:#c56a14}
+    .layer.l4{border-top-color:#b42318}
+    .table-wrap{overflow:auto;margin:18px 0}
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:15px;
+    }
+    th,td{
+      border:1px solid var(--line);
+      text-align:left;
+      vertical-align:top;
+      padding:11px 12px;
+    }
+    th{
+      background:#f2f4f7;
+      color:#344054;
+    }
+    .tag{
+      display:inline-block;
+      border-radius:999px;
+      padding:3px 9px;
+      margin:2px 4px 2px 0;
+      font-size:12px;
+      font-weight:600;
+      background:#eef4ff;
+      color:#3538cd;
+    }
+    .sources a{
+      color:var(--blue);
+      word-break:break-word;
+    }
+    footer{
+      padding:24px 56px 34px;
+      border-top:1px solid var(--line);
+      color:var(--muted);
+      background:#fbfcfe;
+      font-size:13px;
+    }
+    @media (max-width:760px){
+      .page{margin:0;border-radius:0;border-left:0;border-right:0}
+      header,main,footer{padding-left:24px;padding-right:24px}
+      h1{font-size:29px}
+      .grid{grid-template-columns:1fr}
+    }
+    @media print{
+      body{background:#fff}
+      .page{box-shadow:none;border:0;margin:0;max-width:none}
+      nav{break-inside:avoid}
+      h2,h3{break-after:avoid}
+      .card,.callout,pre,table{break-inside:avoid}
+      a{color:inherit;text-decoration:none}
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="eyebrow">FDX / Horizon / Fraud Decision Authoring</div>
+    <h1>FDX Horizon PoC：四层架构梳理与下一步建议</h1>
+    <p class="subtitle">
+      基于当前四张架构图，对 Fraud System 五大能力域、Horizon 四层产物转换链、
+      Verification Gate、Runtime 边界以及首个 PoC 切入方式进行统一整理。
+    </p>
+    <div class="meta">整理日期：2026年8月1日 · 适合离线阅读、内部讨论与方案分享</div>
+  </header>
+
+  <main>
+    <p class="lead">
+      核心判断：这不是一个简单的“自然语言生成规则”工具，而是一个
+      <strong>Fraud Decision Authoring and Portability PoC</strong>。
+      其核心资产应当是一个稳定、无歧义、可验证、可图形化、可编译到多种目标平台的统一语义层。
+    </p>
+
+    <nav>
+      <strong>目录</strong>
+      一、两套正交架构
+      二、四层结构
+      三、三个核心调整
+      四、首个 PoC 场景
+      五、下一步建议
+    </nav>
+
+    <section id="two-architectures">
+      <h2>一、当前实际上存在两套相互正交的架构</h2>
+
+      <h3>1. Fraud System 的五大能力域</h3>
+      <p>第一张和第四张图表达的是整个 Fraud System 的业务与技术能力全景：</p>
+
+      <div class="grid">
+        <div class="card"><h4>1. Data Ingestion</h4><p>接入外部供应商、内部支付系统、核心银行平台及其他事件来源。</p></div>
+        <div class="card"><h4>2. Real-time Decisioning</h4><p>在低延迟、高吞吐约束下执行欺诈规则、模型和实时或周期性指标。</p></div>
+        <div class="card"><h4>3. Case Management</h4><p>管理告警、转介、调查和案件闭环。</p></div>
+        <div class="card"><h4>4. Data Repository</h4><p>保存历史数据、审计数据、回放样本、调查数据和运营报表数据。</p></div>
+        <div class="card"><h4>5. Data Science</h4><p>支持规则和模型的开发、训练、仿真、部署、复用与治理。</p></div>
+      </div>
+
+      <h3>2. FDX 术语与五大能力域的映射</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>FDX 术语或组件</th><th>主要映射</th><th>说明</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>FDX RAPIDS Engine</td><td>Real-time Decisioning</td><td>Core Engine and Scoring，承担实时规则、模型和评分执行。</td></tr>
+            <tr><td>FDX Sentinel</td><td>Case Management</td><td>案件、告警和转介处理。</td></tr>
+            <tr><td>FDX Horizon</td><td>Data Science</td><td>Rule Development、Model Development，以及产物向 Runtime 的交付。</td></tr>
+            <tr><td>FDX Transform</td><td>Data Repository / Data Pipeline</td><td>ETL、数据准备和流水线。</td></tr>
+            <tr><td>FDX Foundry</td><td>Data Science</td><td>Build and Release Pipelines。</td></tr>
+            <tr><td>Google Memorystore</td><td>Real-time Decisioning</td><td>支持 Online Feature 和 Profile 的低延迟读取。</td></tr>
+            <tr><td>dbt / Apache Airflow</td><td>Data Repository / Pipeline</td><td>离线数据建模、调度和处理。</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout green">
+        <strong>重要边界：</strong>
+        Horizon 在五大能力域中主要属于 Data Science，但它生成和管理的规则、模型及特征产物，
+        最终会进入 Real-time Decisioning。Horizon 不必拥有 Runtime Engine 本身。
+      </div>
+
+      <h3>3. Horizon PoC 的四层产物转换链</h3>
+      <p>第二、三张图表达的不是 Fraud System 的另一套业务分区，而是从业务意图到运行时产物的生命周期：</p>
+
+      <pre><code>Layer 1: Business Intent
+        ↓ semantic interpretation
+Layer 2: Canonical Fraud Decision Specification
+        ↓ compilation / generation
+Layer 3: Target-specific Technical Artifacts
+        ↓ verification, approval and deployment
+Layer 4: Runtime Execution</code></pre>
+
+      <p>两套架构的关系可以概括为：</p>
+
+      <pre><code>FDX Horizon
+位于五大能力域中的 Data Science
+
+但 Horizon 的端到端工作流
+从业务作者开始，最终连接到 Real-time Decisioning Runtime</code></pre>
+    </section>
+
+    <section id="four-layers">
+      <h2>二、四层结构的进一步整理</h2>
+
+      <div class="card layer">
+        <h3>Layer 1：Business Authoring Layer</h3>
+        <p>主要用户是 Fraud Analyst、Business Analyst、Risk SME。他们使用英语描述检测意图，但不应完全依赖无限制的自由聊天。</p>
+        <p>这一层应提供：</p>
+        <span class="tag">Guided Prompt</span>
+        <span class="tag">模板</span>
+        <span class="tag">Copilot</span>
+        <span class="tag">字段提示</span>
+        <span class="tag">歧义检测</span>
+        <span class="tag">追问澄清</span>
+
+        <div class="quote">
+          Block a card transaction when there are at least five declined transactions from the same card
+          within ten minutes, followed by a successful transaction above USD 500.
+        </div>
+
+        <p>系统不应立刻生成 Java 或 SQL，而应先确认：</p>
+        <ul>
+          <li>“same card”具体使用哪个实体键；</li>
+          <li>五次失败是否包含当前交易；</li>
+          <li>十分钟按 event time 还是 processing time；</li>
+          <li>成功交易是否必须发生在第五次失败之后；</li>
+          <li>不同币种怎样统一换算；</li>
+          <li>迟到事件和乱序事件怎样处理；</li>
+          <li>Block 是硬拒绝，还是只输出风险建议。</li>
+        </ul>
+        <p><strong>Layer 1 的输出应是经过澄清的 Fraud Detection Intent，而不是代码。</strong></p>
+      </div>
+
+      <div class="card layer l2">
+        <h3>Layer 2：Semantic Authoring Layer</h3>
+        <p>这是整个方案中最重要、最值得沉淀为平台资产的一层。</p>
+        <p>建议不要只称为 DSL，而是采用更明确的概念，例如：</p>
+        <ul>
+          <li><strong>Canonical Fraud Decision Specification，CFDS</strong></li>
+          <li><strong>Fraud Decision Intermediate Representation，FDIR</strong></li>
+        </ul>
+        <p>因为它不仅包含语法，还需要承载完整语义：</p>
+        <div class="grid">
+          <div class="card">
+            <h4>决策语义</h4>
+            <ul>
+              <li>规则条件与优先级</li>
+              <li>模型调用与阈值</li>
+              <li>评分组合</li>
+              <li>最终 action / decision</li>
+              <li>explanation 和 reason code</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>数据与时序语义</h4>
+            <ul>
+              <li>实体与字段定义</li>
+              <li>时间窗口和聚合</li>
+              <li>事件顺序</li>
+              <li>缺失值与单位</li>
+              <li>event-time / late event</li>
+              <li>feature freshness</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout gold">
+          所有后端都应消费 Layer 2 的统一语义规范，而不是让 LLM 从英语分别直接生成
+          BigQuery SQL、Janino、PySpark 或其他实现。否则不同后端很容易出现语义漂移。
+        </div>
+
+        <h4>与 DMN / FEEL 的关系</h4>
+        <p>
+          最值得优先参考的是 OMG DMN 与 FEEL。DMN 擅长表达 business decision、decision table
+          和 decision dependency graph；FEEL 提供较为标准化的表达式语义。
+        </p>
+        <p>但 Fraud Detection 还需要额外表达：</p>
+        <ul>
+          <li>滚动时间窗口、distinct count、event sequence、absence of event；</li>
+          <li>在线特征查找、point-in-time semantics、late and out-of-order event；</li>
+          <li>模型调用、规则停止策略、多阶段评分组合；</li>
+          <li>实时 Runtime 的状态和性能约束。</li>
+        </ul>
+
+        <pre><code>Fraud DSL / Canonical Specification
+├── 借鉴 DMN 的 decision graph
+├── 借鉴 FEEL 的 expression semantics
+├── 增加 fraud-specific event/window/feature constructs
+└── 可导出 DMN-compatible subset</code></pre>
+      </div>
+
+      <div class="card layer l3">
+        <h3>Layer 3：Realisation Layer</h3>
+        <p>Janino、ONNX、BigQuery SQL、PySpark/DataProc 可以位于这一层，但不宜作为性质完全相同的产物并列。</p>
+
+        <h4>3A. Rule Realisation</h4>
+        <ul>
+          <li>Janino expression / generated Java</li>
+          <li>Drools DRL</li>
+          <li>BigQuery SQL / Flink SQL</li>
+          <li>PySpark</li>
+          <li>平台专用 Rule JSON / YAML</li>
+        </ul>
+
+        <h4>3B. Feature Realisation</h4>
+        <ul>
+          <li>BigQuery feature SQL、dbt model</li>
+          <li>PySpark feature pipeline</li>
+          <li>Flink stateful feature operator</li>
+          <li>Online feature mapping</li>
+          <li>Redis / Memorystore lookup definition</li>
+        </ul>
+
+        <h4>3C. Model Realisation</h4>
+        <ul>
+          <li>ONNX model binding</li>
+          <li>模型 URI 与版本</li>
+          <li>输入 feature signature</li>
+          <li>preprocessing、threshold、calibration</li>
+          <li>checksum 与兼容性信息</li>
+        </ul>
+
+        <h4>3D. Decision Package and Deployment Metadata</h4>
+        <p>
+          <code>rules.yaml</code>、<code>feedback.yaml</code>、<code>explanations.yaml</code>、
+          <code>map-operators.yaml</code>、<code>features-map.yaml</code> 更像 deployment package，
+          而不是 Janino 本身。
+        </p>
+
+        <pre><code>Java/Flink Decision Package
+├── Janino expressions / compiled rule functions
+├── rules.yaml
+├── feature-map.yaml
+├── operator-map.yaml
+├── explanations.yaml
+└── deployment manifest</code></pre>
+      </div>
+
+      <h3>Verification and Conformance Gate</h3>
+      <p>将 Gate 放在 Layer 3 与 Layer 4 之间是合理的，但它不应只检查“是否能编译”。</p>
+
+      <div class="grid">
+        <div class="card">
+          <h4>1. Structural Validation</h4>
+          <ul>
+            <li>Schema 和必填字段</li>
+            <li>类型与引用完整性</li>
+            <li>Feature / Model / Rule 是否存在</li>
+            <li>DAG 是否有环</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>2. Semantic Validation</h4>
+          <ul>
+            <li>窗口是否合法</li>
+            <li>规则冲突与重叠</li>
+            <li>遗漏路径和不可达路径</li>
+            <li>单位、币种和 null handling</li>
+            <li>是否错误引用未来数据</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>3. Target Validation</h4>
+          <ul>
+            <li>SQL compile / dry run</li>
+            <li>Java / Janino compile</li>
+            <li>PySpark plan validation</li>
+            <li>ONNX input signature</li>
+            <li>Runtime capability check</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>4. Behavioural Equivalence</h4>
+          <ul>
+            <li>相同输入数据</li>
+            <li>不同后端执行</li>
+            <li>比较 feature、rule hit、score、decision、explanation</li>
+            <li>使用 Golden Test Dataset</li>
+          </ul>
+        </div>
+      </div>
+
+      <pre><code>Canonical specification
+        ├── compile to Java/Flink
+        ├── compile to BigQuery SQL
+        └── compile to PySpark
+
+same input fixtures
+        ↓
+compare features, rule hits, score, decision and explanation</code></pre>
+
+      <div class="callout purple">
+        因此，这一层更适合命名为 <strong>Verification and Conformance Gate</strong>。
+      </div>
+
+      <div class="card layer l4">
+        <h3>Layer 4：Runtime Deployment Layer</h3>
+
+        <h4>Decision Runtime</h4>
+        <ul>
+          <li>接收 transaction context；</li>
+          <li>读取在线 feature / profile；</li>
+          <li>执行规则、调用模型和进行 score aggregation；</li>
+          <li>生成 action、decision、reason code、explanation 和 audit trace；</li>
+          <li>支持版本激活、hot reload 和 rollback。</li>
+        </ul>
+
+        <h4>Online Feature and Profile Service</h4>
+        <ul>
+          <li>point feature、rolling window state、profile 和 list lookup；</li>
+          <li>velocity feature、预计算聚合和 feature freshness；</li>
+          <li>Redis / Memorystore、Flink keyed state、本地 cache 或外部 feature service。</li>
+        </ul>
+
+        <pre><code>Online Feature Serving
+├── Stream-computed state
+├── External feature store
+├── Profile service
+├── Reference/list cache
+└── Feature freshness metadata</code></pre>
+
+        <div class="callout red">
+          Runtime Engine、Flink state、Online Feature Serving 基础设施可以属于 RAPIDS 或其他平台。
+          Horizon 更适合负责 authoring、semantic specification、generation、verification、approval
+          和 release package，而不是把所有运行时能力都纳入自身范围。
+        </div>
+      </div>
+    </section>
+
+    <section id="adjustments">
+      <h2>三、建议对当前架构做的三个核心调整</h2>
+
+      <h3>调整一：Layer 2 不只是一个 DSL 文件，而是统一语义模型</h3>
+      <pre><code>Canonical Semantic Model
+├── Textual DSL / YAML View
+├── Graph / DAG View
+└── Business Form / Decision Table View</code></pre>
+      <p>三种形式应是同一个语义模型的不同呈现，而不是彼此独立地来回转换。</p>
+
+      <pre><code>          Canonical in-memory model
+          /          |           \
+       DSL        DAG view      Form/table</code></pre>
+
+      <h3>调整二：区分 Authoring、Compilation 和 Deployment Ownership</h3>
+      <div class="grid">
+        <div class="card">
+          <h4>Horizon 适合负责</h4>
+          <ul>
+            <li>Business authoring</li>
+            <li>Semantic specification</li>
+            <li>Target artifact generation</li>
+            <li>Verification</li>
+            <li>Approval workflow</li>
+            <li>Release package creation</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>不一定由 Horizon 负责</h4>
+          <ul>
+            <li>Runtime transaction processing</li>
+            <li>Flink state management</li>
+            <li>Online feature infrastructure</li>
+            <li>Case management</li>
+          </ul>
+        </div>
+      </div>
+      <p>Layer 4 的标题可以调整为：<strong>Target Runtime and Deployment Integration</strong>。</p>
+
+      <h3>调整三：第一个 PoC 不要同时实现所有后端</h3>
+      <p>目标架构可以支持很多后端，但首个 PoC 建议只做一个纵向切片：</p>
+
+      <pre><code>English
+→ Fraud DSL
+→ DAG
+→ Java / Janino package
+→ lightweight local runtime</code></pre>
+
+      <p>再增加一个性质不同的离线后端：</p>
+
+      <pre><code>Fraud DSL
+→ BigQuery-compatible SQL</code></pre>
+
+      <p>
+        这样即可证明一个核心命题：<strong>同一份 Canonical Specification 能生成两类不同的目标产物，
+        且结果可以被验证为语义一致。</strong>
+      </p>
+    </section>
+
+    <section id="poc">
+      <h2>四、建议的第一个 PoC 场景</h2>
+      <p>第一版不建议从模型训练切入，而应选择一个能同时验证窗口、顺序、特征、规则和解释的 Fraud Scenario。</p>
+
+      <h3>Card Testing followed by High-value Purchase</h3>
+      <pre><code>When:
+  at least 5 declined card-not-present transactions
+  from the same card
+  across at least 3 merchants
+  within 10 minutes
+
+followed by:
+  a successful transaction
+  with amount converted to USD >= 500
+  within 5 minutes
+
+then:
+  risk_score += 70
+  decision = REFER
+  reason_code = CARD_TESTING_FOLLOWED_BY_PURCHASE</code></pre>
+
+      <p>这个场景能够同时验证：</p>
+      <div class="grid">
+        <div class="card">
+          <ul>
+            <li>自然语言歧义处理</li>
+            <li>entity key</li>
+            <li>distinct count</li>
+            <li>rolling window</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul>
+            <li>event sequence</li>
+            <li>currency normalization</li>
+            <li>feature dependency</li>
+            <li>decision 和 explanation</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="next">
+      <h2>五、下一步建议</h2>
+
+      <h3>第一步：定义最小 Canonical Fraud DSL</h3>
+      <p>第一版只支持约十个核心构造：</p>
+      <pre><code>entity
+event
+field
+feature
+filter
+window
+aggregate
+sequence
+rule
+decision</code></pre>
+      <p>再附加：</p>
+      <pre><code>model
+explanation
+metadata</code></pre>
+
+      <h3>第二步：为一个案例准备完整的端到端资产</h3>
+      <pre><code>01_business_intent.md
+02_clarified_intent.json
+03_fraud_spec.yaml
+04_decision_graph.json
+05_expected_results.json</code></pre>
+
+      <h3>第三步：建立两个 Compiler Adapter</h3>
+      <pre><code>fraud-spec-to-janino
+fraud-spec-to-sql</code></pre>
+
+      <p>两个 adapter 都必须经过：</p>
+      <pre><code>schema validation
+semantic validation
+golden test</code></pre>
+
+      <div class="callout green">
+        下一轮最有价值的输入是 FDX Level 2 的详细设计图。完成该图的边界对齐后，
+        就可以进一步形成个人 GitHub 仓库的目录结构、PoC 架构图、迭代计划和首批示例文件。
+      </div>
+    </section>
+
+    <section class="sources">
+<h2>参考资料（离线说明）</h2>
+<p>本离线版本不包含任何外部链接，确保可在完全离线环境中浏览。</p>
+<ul>
+<li>OMG Decision Model and Notation (DMN)</li>
+<li>Drools DMN Documentation</li>
+<li>Apache Flink CEP</li>
+<li>Janino Embedded Java Compiler</li>
+<li>DMN Decision Table Analysis</li>
+</ul>
+</section>
+  </main>
+
+  <footer>
+    本文为当前 PoC 架构讨论的阶段性整理，重点用于统一术语、系统边界和实现顺序。
+    HTML 文件可直接在浏览器中打开，也可通过浏览器“打印”为 PDF。
+  </footer>
+</div>
+</body>
+</html>

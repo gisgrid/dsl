@@ -1,0 +1,17 @@
+# Demo shortcut for batch replay on Spark / DataProc.
+
+from pyspark.sql import functions as F
+
+result = (
+    transactions
+    .join(fraudulent_merchant_list.withColumn("merchant_blacklisted", F.lit(True)), on="merchant_id", how="left")
+    .join(fraudulent_device_list.withColumn("device_blacklisted", F.lit(True)), on="device_id", how="left")
+    .join(card_fraud_model_scores, on="transaction_id", how="left")
+    .withColumn(
+        "decision",
+        F.when(F.col("merchant_blacklisted") == True, F.lit("DECLINE"))
+         .when(F.col("device_blacklisted") == True, F.lit("DECLINE"))
+{% for band in score_bands %}         .when(F.col("{{ model_step.output_field }}").between({{ band.range.min }}, {{ band.range.max }}), F.lit("{{ band.decision }}"))
+{% endfor %}         .otherwise(F.lit("{{ default_step.decision }}"))
+    )
+)

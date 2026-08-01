@@ -1,0 +1,34 @@
+-- Demo shortcut for offline replay / simulation.
+WITH enriched AS (
+  SELECT
+    t.transaction_id,
+    t.merchant_id,
+    t.device_id,
+    ms.{{ model_step.output_field }},
+    fm.merchant_id IS NOT NULL AS merchant_blacklisted,
+    fd.device_id IS NOT NULL AS device_blacklisted
+  FROM transactions t
+  LEFT JOIN fraudulent_merchant_list fm
+    ON t.merchant_id = fm.merchant_id
+  LEFT JOIN fraudulent_device_list fd
+    ON t.device_id = fd.device_id
+  LEFT JOIN card_fraud_model_scores ms
+    ON t.transaction_id = ms.transaction_id
+)
+
+SELECT
+  transaction_id,
+  {{ model_step.output_field }},
+  CASE
+    {% for step in list_steps %}{% if loop.first %}WHEN merchant_blacklisted THEN 'DECLINE'
+    {% else %}WHEN device_blacklisted THEN 'DECLINE'
+    {% endif %}{% endfor %}{% for band in score_bands %}WHEN {{ model_step.output_field }} BETWEEN {{ band.range.min }} AND {{ band.range.max }} THEN '{{ band.decision }}'
+    {% endfor %}ELSE '{{ default_step.decision }}'
+  END AS decision,
+  CASE
+    WHEN merchant_blacklisted THEN 'FRAUDULENT_MERCHANT_MATCH'
+    WHEN device_blacklisted THEN 'FRAUDULENT_DEVICE_MATCH'
+    {% for band in score_bands %}WHEN {{ model_step.output_field }} BETWEEN {{ band.range.min }} AND {{ band.range.max }} THEN '{{ band.reason_code }}'
+    {% endfor %}ELSE '{{ default_step.reason_code }}'
+  END AS reason_code
+FROM enriched;

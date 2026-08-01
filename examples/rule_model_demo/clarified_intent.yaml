@@ -1,0 +1,15 @@
+merchant_field: merchant_id
+device_field: device_id
+list_lookup_error: REFER
+model_id: card_fraud_detection_model
+model_version: demo-v1
+model_inference_error: REFER
+score_boundaries: inclusive
+below_800: APPROVE
+output_fields:
+  - decision
+  - reason_code
+  - explanation
+  - fraud_score
+  - matched_step_id
+  - strategy_version

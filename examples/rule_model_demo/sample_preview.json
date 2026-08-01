@@ -1,0 +1,6 @@
+{
+  "decision_graph": "Transaction -> merchant blacklist -> device blacklist -> model -> score bands",
+  "janino_preview": "includes blacklist checks and score-based decisions",
+  "bigquery_preview": "includes CASE logic for lists and score bands",
+  "pyspark_preview": "includes chained when clauses for list hits and score bands"
+}

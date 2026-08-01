@@ -1,0 +1,32 @@
+// Demo shortcut generated from the Layer 2 specification.
+// The surrounding runtime context is assumed to provide list and model services.
+{% for step in list_steps %}
+if (listService.contains("{{ step.list_ref }}", transaction.get{{ step.input_field|replace('_', ' ')|title|replace(' ', '') }}())) {
+    return DecisionResult.{{ step.when_matched.decision.lower() }}(
+        "{{ step.when_matched.reason_code }}",
+        "{{ step.when_matched.explanation }}"
+    );
+}
+
+{% endfor %}
+int {{ model_step.output_field }} = modelService.predictScore(
+    "{{ model_resource.id }}",
+    transaction,
+    featureContext
+);
+
+{% for band in score_bands %}
+if ({{ band.score_field }} >= {{ band.range.min }} && {{ band.score_field }} <= {{ band.range.max }}) {
+    return DecisionResult.{{ band.decision.lower() }}(
+        {{ band.score_field }},
+        "{{ band.reason_code }}",
+        "{{ band.explanation }}"
+    );
+}
+
+{% endfor %}
+return DecisionResult.{{ default_step.decision.lower() }}(
+    {{ model_step.output_field }},
+    "{{ default_step.reason_code }}",
+    "{{ default_step.explanation }}"
+);
