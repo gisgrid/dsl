@@ -32,6 +32,18 @@ This repository demonstrates a guided path from business English to a reviewable
 
 Layer 3 is template-based preview generation, not a production compiler.
 
+## PoC Demonstration Flow
+
+1. Understand the Horizon concept and current scope
+2. Enter or load a Business Intent
+3. Analyse the preliminary interpretation
+4. Review ambiguities
+5. Provide natural-language and structured clarification
+6. Generate the Canonical Fraud Decision Specification
+7. Review YAML, graph and semantic validation
+8. Select a target implementation preview
+9. Future: target validation, replay, approval and deployment
+
 ## Install
 
 ```bash
@@ -57,7 +69,8 @@ pytest
 - `app.py` - Streamlit PoC UI
 - `src/horizon_dsl/semantic` - canonical models, validation, YAML rendering
 - `src/horizon_dsl/authoring` - deterministic Layer 1 parsing and clarification helpers
-- `src/horizon_dsl/graph` - Mermaid graph generation
+- `src/horizon_dsl/graph` - semantic graph view models and offline SVG rendering
 - `src/horizon_dsl/templates` - Layer 3 preview renderers and Jinja templates
+- `src/horizon_dsl/ui` - staged presentation flow, section renderers, and UI helpers
 - `examples/rule_model_demo` - demo business intent and expected assets
 - `docs/` - source design documents, scope notes, and ADRs

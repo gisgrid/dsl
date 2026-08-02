@@ -1,3 +1,37 @@
-from horizon_dsl.ui.workflow import initial_workflow_state, normalize_output_fields, spec_view_model
+from horizon_dsl.ui.workflow import (
+    TARGET_AWS,
+    TARGET_BIGQUERY,
+    TARGET_JANINO,
+    TARGET_METADATA,
+    TARGET_PYSPARK,
+    build_preliminary_bundle,
+    build_spec_bundle,
+    build_spec_from_clarifications,
+    initial_workflow_state,
+    intent_is_stale,
+    load_demo_text,
+    normalize_output_fields,
+    spec_is_valid,
+    target_preview_for_selection,
+    target_validation_message,
+    workflow_stage,
+)
 
-__all__ = ["initial_workflow_state", "normalize_output_fields", "spec_view_model"]
+__all__ = [
+    "TARGET_AWS",
+    "TARGET_BIGQUERY",
+    "TARGET_JANINO",
+    "TARGET_METADATA",
+    "TARGET_PYSPARK",
+    "build_preliminary_bundle",
+    "build_spec_bundle",
+    "build_spec_from_clarifications",
+    "initial_workflow_state",
+    "intent_is_stale",
+    "load_demo_text",
+    "normalize_output_fields",
+    "spec_is_valid",
+    "target_preview_for_selection",
+    "target_validation_message",
+    "workflow_stage",
+]
