@@ -4,6 +4,8 @@ from typing import cast
 
 import streamlit as st
 
+from horizon_dsl.ui.rendering import render_embedded_html
+
 
 def render_intent_section(
     *,
@@ -50,7 +52,7 @@ def render_intent_section(
             st.caption(
                 "Preliminary interpretation based on the current business intent. Assumptions and unresolved ambiguities can be corrected in the clarification stage."
             )
-            st.html(preliminary_bundle["graph_svg"])
+            render_embedded_html(cast(str, preliminary_bundle["graph_svg"]), height=980)
             with st.expander("View graph source"):
                 st.code(preliminary_bundle["graph_source"], language="text")
             if is_stale:

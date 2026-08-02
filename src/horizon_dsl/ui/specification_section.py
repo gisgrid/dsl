@@ -5,6 +5,7 @@ from typing import cast
 import streamlit as st
 
 from horizon_dsl.semantic.validation import ValidationIssue
+from horizon_dsl.ui.rendering import render_embedded_html
 
 
 def render_specification_section(
@@ -37,7 +38,7 @@ def render_specification_section(
                     st.write(cast(str, spec_bundle["review_context"]))
 
         with tabs[1]:
-            st.html(cast(str, spec_bundle["graph_svg"]))
+            render_embedded_html(cast(str, spec_bundle["graph_svg"]), height=980)
             with st.expander("View graph source"):
                 st.code(cast(str, spec_bundle["graph_source"]), language="text")
 

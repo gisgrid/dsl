@@ -16,6 +16,7 @@ from horizon_dsl.ui.workflow import (
     target_validation_message,
     workflow_stage,
 )
+from horizon_dsl.ui.rendering import render_embedded_html
 
 __all__ = [
     "TARGET_AWS",
@@ -30,6 +31,7 @@ __all__ = [
     "intent_is_stale",
     "load_demo_text",
     "normalize_output_fields",
+    "render_embedded_html",
     "spec_is_valid",
     "target_preview_for_selection",
     "target_validation_message",
