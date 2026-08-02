@@ -22,7 +22,7 @@ def default_clarifications() -> dict[str, str]:
         "model_id": "card_fraud_detection_model",
         "model_version": "demo-v1",
         "model_inference_error": "REFER",
-        "score_boundaries": "inclusive",
-        "below_800": "APPROVE",
+        "score_boundaries_inclusive": "true",
+        "below_800_decision": "APPROVE",
         "output_fields": "decision, reason_code, explanation, fraud_score, matched_step_id, strategy_version",
     }

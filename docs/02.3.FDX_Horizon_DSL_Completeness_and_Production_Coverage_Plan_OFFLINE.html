@@ -1,0 +1,182 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>02.3 FDX Horizon DSL Completeness Plan</title><style>
+body{margin:0;background:#f5f7fb;color:#1f2937;font:16px/1.7 "Segoe UI","Microsoft YaHei",Arial,sans-serif}
+main{max-width:1100px;margin:28px auto;background:#fff;padding:46px 54px;border:1px solid #d8e0ea;border-radius:18px;box-shadow:0 12px 32px #10182814}
+h1{font-size:34px;line-height:1.25;color:#101828} h2{margin-top:42px;border-bottom:2px solid #e9eef5;padding-bottom:7px;color:#101828}
+h3{color:#344054} .lead{font-size:18px;background:#eef5ff;border-left:5px solid #175cd3;padding:16px 20px}
+nav{padding:16px 20px;background:#f8fafc;border:1px solid #d8e0ea;border-radius:12px} nav a{display:inline-block;margin-right:14px;color:#175cd3;text-decoration:none}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.grid section{border:1px solid #d8e0ea;border-radius:12px;padding:16px}
+table{width:100%;border-collapse:collapse;margin:16px 0}th,td{border:1px solid #d8e0ea;padding:10px;text-align:left;vertical-align:top}th{background:#f2f4f7}
+pre{background:#101828;color:#f2f4f7;padding:17px;border-radius:11px;overflow:auto;white-space:pre-wrap}
+.note,.warn,.final{margin:18px 0;padding:15px 18px;border-radius:11px;border-left:5px solid #b54708;background:#fff7ed}
+.warn{border-left-color:#b42318;background:#fff1f3}.final{border-left-color:#067647;background:#ecfdf3}.small{font-size:13px;color:#667085}
+@media(max-width:760px){main{margin:0;border-radius:0;padding:24px}.grid{grid-template-columns:1fr}h1{font-size:28px}}
+@media print{body{background:#fff}main{box-shadow:none;border:0;margin:0;max-width:none}.grid section,table,pre{break-inside:avoid}}
+</style></head><body><main>
+<h1>02.3 FDX Horizon DSL 完备性与 Production Coverage 计划</h1>
+<p class="lead">DSL 的“完备性”不能通过字段数量或设计评审直接宣布。可信的证明方式是：<b>Production Rule / Model Inventory + Capability Matrix + Golden Rule Corpus + Differential Replay + Behavioural Equivalence</b>。</p>
+
+<nav>
+<a href="#s1">1. 完备性的定义</a><a href="#s2">2. Production 盘点</a><a href="#s3">3. Golden Rule Corpus</a>
+<a href="#s4">4. 量化指标</a><a href="#s5">5. 模型支持</a><a href="#s6">6. 双轨回放</a>
+<a href="#s7">7. 扩展机制</a><a href="#s8">8. 后续计划</a>
+</nav>
+
+<h2 id="s1">一、先定义“DSL 完备”是什么意思</h2>
+<div class="grid">
+<section><h3>表达完备性</h3><p>现有 production 规则中的每一种语义构造，DSL 是否有明确表达。</p>
+<ul><li>字段比较、AND / OR / NOT</li><li>黑白名单与 profile lookup</li><li>优先级、first-match、stop / continue</li>
+<li>窗口聚合、distinct count、事件序列</li><li>模型调用、多模型编排、fallback</li><li>reason code、explanation、error handling</li></ul></section>
+<section><h3>语义完备性</h3><ul><li>边界是否包含</li><li>null 如何处理</li><li>lookup / inference 失败如何处理</li>
+<li>event time、时区、late event</li><li>多条规则同时命中如何解决</li><li>score 是覆盖、累加还是取最大值</li></ul></section>
+<section><h3>行为等价性</h3><p>相同 replay 数据在生产引擎与 DSL 实现中的结果是否一致。</p>
+<ul><li>decision</li><li>score</li><li>matched rule / step</li><li>reason code</li><li>model version</li><li>fallback path</li></ul></section>
+<section><h3>Runtime Contract 完备性</h3><ul><li>required features 与 freshness</li><li>model artifact / endpoint / version</li>
+<li>timeout、retry、fallback</li><li>latency class、audit fields</li><li>部署兼容性</li></ul></section>
+</div>
+
+<div class="note">当前 Layer 1 / Layer 2 PoC 不必立刻覆盖所有 Runtime Contract，但应预留清晰边界，避免未来只能通过嵌入任意 Java 或 Python 来绕过 DSL。</div>
+
+<h2 id="s2">二、先做 Production Rule and Model Inventory</h2>
+<p>下一步不应先盲目扩 DSL，而应盘点现有 production 规则和模型。</p>
+<h3>Production Rule Inventory</h3>
+<table><tr><th>字段</th><th>示例</th></tr>
+<tr><td>Rule ID</td><td>RULE_1023</td></tr><tr><td>Business Scenario</td><td>Known fraudulent device</td></tr>
+<tr><td>Source Platform</td><td>Feedzai / Java / SQL</td></tr><tr><td>Input Fields</td><td>device_id, merchant_id</td></tr>
+<tr><td>Operators</td><td>list_match, equals</td></tr><tr><td>Execution Order</td><td>priority 10</td></tr>
+<tr><td>Action / Stop</td><td>DECLINE / true</td></tr><tr><td>Error Handling</td><td>REFER</td></tr>
+<tr><td>DSL Support</td><td>Yes / Partial / No</td></tr><tr><td>Gap</td><td>list version semantics</td></tr></table>
+
+<h3>Production Model Inventory</h3>
+<table><tr><th>字段</th><th>示例</th></tr>
+<tr><td>Model ID</td><td>card_fraud_v7</td></tr><tr><td>Input Feature Set</td><td>172 features</td></tr>
+<tr><td>Pre-processing</td><td>normalization / mapping</td></tr><tr><td>Invocation Mode</td><td>endpoint / ONNX / embedded</td></tr>
+<tr><td>Output</td><td>fraud_score 0–999</td></tr><tr><td>Timeout / Fallback</td><td>50 ms / REFER</td></tr>
+<tr><td>Post-model Rules</td><td>900–999 DECLINE</td></tr><tr><td>DSL Support</td><td>Yes / Partial / No</td></tr></table>
+
+<h3>Capability Matrix 示例</h3>
+<pre>Production construct                         DSL support
+----------------------------------------------------------------
+Simple field comparison                      Yes
+Blacklist lookup                             Yes
+Model invocation                             Yes
+Score band                                   Yes
+First-match / stop                           Yes
+72-hour rolling distinct count               No
+Event sequence                               Partial
+Rule salience / agenda group                 No
+Feature freshness requirement                No
+Multiple model orchestration                 Partial</pre>
+
+<h2 id="s3">三、建立 Golden Rule Corpus</h2>
+<p>优先选取 20–50 条覆盖面最大的规则，而不是一次迁移全部 production 规则。</p>
+<div class="grid"><section><h3>基础规则</h3><p>字段比较、名单命中、默认动作。</p></section>
+<section><h3>规则 + 模型</h3><p>黑名单、模型调用、分数区间、fallback。</p></section>
+<section><h3>时间窗口</h3><p>velocity、rolling count、distinct count。</p></section>
+<section><h3>事件序列</h3><p>先失败后成功、absence of event、顺序约束。</p></section>
+<section><h3>Profile / Feature</h3><p>设备、客户、商户 profile 与 freshness。</p></section>
+<section><h3>复杂编排</h3><p>多模型、多阶段评分、规则冲突与回退路径。</p></section></div>
+<pre>production-rule-corpus/
+└── RULE_1023/
+    ├── production-definition.*
+    ├── business-description.md
+    ├── fraud-spec.yaml
+    ├── input-fixtures.json
+    ├── expected-output.json
+    ├── actual-production-output.json
+    └── coverage-assessment.md</pre>
+
+<h2 id="s4">四、量化完备性</h2>
+<div class="grid"><section><h3>Rule Coverage</h3><p>完整表达规则数 ÷ 评估规则总数。</p></section>
+<section><h3>Construct Coverage</h3><p>已支持语义构造数 ÷ 识别构造总数。</p></section>
+<section><h3>Behaviour Match</h3><p>decision、score、reason code、matched path 的一致率。</p></section>
+<section><h3>Unsupported Rate</h3><p>Unsupported、Ambiguous、Platform-specific、Requires extension。</p></section></div>
+<table><tr><th>指标</th><th>初期目标示例</th><th>成熟目标示例</th></tr>
+<tr><td>Rule Expression Coverage</td><td>≥ 80%</td><td>≥ 95%</td></tr>
+<tr><td>Construct Coverage</td><td>≥ 75%</td><td>≥ 95%</td></tr>
+<tr><td>Decision Match Rate</td><td>≥ 99%</td><td>100% 或批准的例外</td></tr>
+<tr><td>Reason Code Match Rate</td><td>≥ 95%</td><td>≥ 99.9%</td></tr></table>
+<p class="small">这些数字仅用于规划示例，最终阈值应结合风险等级、迁移策略与验收要求确定。</p>
+
+<h2 id="s5">五、模型支持的重点是 Model Binding Contract</h2>
+<p>DSL 通常不描述 XGBoost 树或神经网络内部结构，而应描述输入、输出、版本、调用、异常处理和 post-model decision。</p>
+<pre>model:
+  id: card_fraud_detection_model
+  version: v7
+  input_schema:
+    feature_set: card_fraud_v7_features
+    required_count: 172
+  output:
+    field: fraud_score
+    type: integer
+    minimum: 0
+    maximum: 999
+  runtime:
+    timeout_ms: 50
+    on_timeout: REFER
+    on_inference_error: REFER
+    on_missing_feature: REFER
+  post_model_decision:
+    - range: [900, 999]
+      decision: DECLINE
+    - range: [800, 899]
+      decision: REFER
+    - default:
+      decision: APPROVE</pre>
+
+<h2 id="s6">六、最终证明方法：双轨回放</h2>
+<pre>                     SAME REPLAY DATASET
+                              │
+              ┌───────────────┴───────────────┐
+              ▼                               ▼
+   Current Production Engine          DSL-based Implementation
+              │                               │
+              ├── decision                    ├── decision
+              ├── score                       ├── score
+              ├── matched rule                ├── matched step
+              ├── reason code                 ├── reason code
+              └── fallback path               └── fallback path
+              └───────────────┬───────────────┘
+                              ▼
+                 Differential Comparison Report</pre>
+<p>不一致样本应分类为：DSL 表达缺失、转换器错误、原规则隐式语义、Runtime 差异、时序差异、feature / model 版本差异，或 production 实现本身的问题。</p>
+
+<h2 id="s7">七、允许“明确不支持”，不要假装完备</h2>
+<pre>Core DSL
++ Controlled Extensions
++ Explicit Unsupported Result</pre>
+<pre>support_status:
+  level: unsupported
+  reason: requires_event_sequence_with_negative_pattern</pre>
+<pre>extensions:
+  - namespace: fdx
+    type: custom_operator
+    name: shared_device_ring_score
+    version: "1.0"</pre>
+<div class="warn">不建议允许任意嵌入 Java、Python 或 SQL 作为通用逃生口，否则 DSL 会失去统一语义、可验证性与可移植性。</div>
+
+<h2 id="s8">八、建议的后续工作计划</h2>
+<h3>Phase A：Production Coverage Assessment</h3>
+<pre>docs/
+├── production-capability-matrix.md
+├── production-rule-inventory.csv
+├── production-model-inventory.csv
+└── coverage-methodology.md</pre>
+
+<h3>Phase B：增加代表性场景</h3>
+<ol><li>Blacklist + model score</li><li>Velocity rule</li><li>Rolling window aggregation</li>
+<li>Event sequence</li><li>Shared device / fraud ring</li><li>Multiple model orchestration</li><li>Fallback and error path</li></ol>
+
+<h3>Phase C：建立 Replay Test Assets</h3>
+<pre>examples/production-rule-corpus/
+└── scenario_name/
+    ├── fraud_spec.yaml
+    ├── input_events.json
+    ├── expected_decisions.json
+    ├── production_outputs.json
+    └── comparison_report.json</pre>
+
+<h3>Phase D：依据真实缺口扩展 DSL</h3>
+<p>只有 Production Corpus 暴露出真实语义缺口时，才扩展 DSL，不建议提前设计大量没有 production 依据的语法。</p>
+
+<div class="final">当前 PoC 仍应优先打磨 Layer 1 → Layer 2 的交互质量；Production Coverage 可作为并行轨道，用真实规则语料逐步验证和塑造 DSL。</div>
+<hr><p class="small">完全离线版本：不引用任何外部 CSS、JavaScript、字体、图片或网络链接。可直接双击打开或打印为 PDF。</p></main></body></html>

@@ -42,6 +42,8 @@ def build_demo_spec(clarifications: dict[str, str] | None = None) -> FraudDecisi
     model_version = answers["model_version"]
     list_lookup_error = answers["list_lookup_error"]
     model_inference_error = answers["model_inference_error"]
+    score_boundaries_inclusive = str(answers["score_boundaries_inclusive"]).lower() == "true"
+    below_800_decision = answers["below_800_decision"]
     output_fields = [field.strip() for field in answers["output_fields"].split(",")]
 
     return FraudDecisionSpec(
@@ -118,7 +120,12 @@ def build_demo_spec(clarifications: dict[str, str] | None = None) -> FraudDecisi
                     id="decline_high_score",
                     type="score_band",
                     score_field="fraud_score",
-                    range=ScoreRange(min=900, max=999, include_min=True, include_max=True),
+                    range=ScoreRange(
+                        min=900,
+                        max=999,
+                        include_min=score_boundaries_inclusive,
+                        include_max=score_boundaries_inclusive,
+                    ),
                     decision="DECLINE",
                     reason_code="MODEL_SCORE_DECLINE",
                     explanation="Model fraud score is between 900 and 999.",
@@ -127,7 +134,12 @@ def build_demo_spec(clarifications: dict[str, str] | None = None) -> FraudDecisi
                     id="refer_medium_high_score",
                     type="score_band",
                     score_field="fraud_score",
-                    range=ScoreRange(min=800, max=899, include_min=True, include_max=True),
+                    range=ScoreRange(
+                        min=800,
+                        max=899,
+                        include_min=score_boundaries_inclusive,
+                        include_max=score_boundaries_inclusive,
+                    ),
                     decision="REFER",
                     reason_code="MODEL_SCORE_REFER",
                     explanation="Model fraud score is between 800 and 899.",
@@ -135,7 +147,7 @@ def build_demo_spec(clarifications: dict[str, str] | None = None) -> FraudDecisi
                 DefaultStep(
                     id="approve_default",
                     type="default",
-                    decision="APPROVE",
+                    decision=below_800_decision,
                     reason_code="MODEL_SCORE_APPROVE",
                     explanation="No blacklist match and model score is below 800.",
                 ),
@@ -146,7 +158,6 @@ def build_demo_spec(clarifications: dict[str, str] | None = None) -> FraudDecisi
 
 
 def parse_business_intent(intent_text: str, clarifications: dict[str, str] | None = None) -> dict[str, object]:
-    spec = build_demo_spec(clarifications=clarifications)
     return {
         "intent_text": intent_text,
         "detected_intent": [
@@ -160,5 +171,4 @@ def parse_business_intent(intent_text: str, clarifications: dict[str, str] | Non
         "ambiguities": detect_ambiguities(intent_text),
         "clarification_questions": build_clarification_questions(),
         "clarifications": default_clarifications() if clarifications is None else {**default_clarifications(), **clarifications},
-        "spec": spec,
     }
