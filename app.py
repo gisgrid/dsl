@@ -28,6 +28,10 @@ def _initialise_state() -> None:
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+    if "pending_intent_editor" in st.session_state:
+        st.session_state.intent_text = st.session_state.pending_intent_editor
+        st.session_state.intent_editor = st.session_state.pending_intent_editor
+        st.session_state.pop("pending_intent_editor")
     if "intent_editor" not in st.session_state:
         st.session_state.intent_editor = st.session_state.intent_text
     _load_clarification_widgets(force=False)
@@ -67,9 +71,11 @@ def _capture_clarifications() -> dict[str, str]:
 
 def _apply_load_demo() -> None:
     updated = load_demo_text(dict(st.session_state))
-    for key, value in updated.items():
-        st.session_state[key] = value
-    st.session_state.intent_editor = st.session_state.intent_text
+    st.session_state.intent_text = updated["intent_text"]
+    st.session_state.pending_intent_editor = updated["intent_text"]
+    st.session_state.target_notice = updated["target_notice"]
+    st.session_state.voice_notice = updated["voice_notice"]
+    st.session_state.target_validation_notice = updated["target_validation_notice"]
 
 
 def _apply_analysis(intent_text: str) -> None:

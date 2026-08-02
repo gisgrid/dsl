@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from typing import cast
+
 import streamlit as st
-import streamlit.components.v1 as components
 
 
 def render_intent_section(
@@ -20,7 +21,6 @@ def render_intent_section(
         current_text = st.text_area(
             "Business Intent",
             key="intent_editor",
-            value=intent_text,
             height=260,
             placeholder="Describe the fraud strategy in natural language or load the demo scenario.",
         )
@@ -50,7 +50,7 @@ def render_intent_section(
             st.caption(
                 "Preliminary interpretation based on the current business intent. Assumptions and unresolved ambiguities can be corrected in the clarification stage."
             )
-            components.html(preliminary_bundle["graph_svg"], height=preliminary_bundle["draft_spec"].decision_flow.steps.__len__() * 120 + 560)
+            st.html(preliminary_bundle["graph_svg"])
             with st.expander("View graph source"):
                 st.code(preliminary_bundle["graph_source"], language="text")
             if is_stale:
@@ -62,10 +62,10 @@ def render_intent_section(
 
 def _render_analysis_lists(analysis: dict[str, object]) -> None:
     st.markdown("### Detected Intent")
-    for item in analysis["detected_intent"]:
+    for item in cast(list[str], analysis["detected_intent"]):
         st.write(f"- {item}")
     st.markdown("### Ambiguities")
-    ambiguities = analysis["ambiguities"]
+    ambiguities = cast(list[str], analysis["ambiguities"])
     if ambiguities:
         for item in ambiguities:
             st.write(f"- {item}")

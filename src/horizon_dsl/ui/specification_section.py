@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import cast
 
 import streamlit as st
-import streamlit.components.v1 as components
 
 from horizon_dsl.semantic.validation import ValidationIssue
 
@@ -38,7 +37,7 @@ def render_specification_section(
                     st.write(cast(str, spec_bundle["review_context"]))
 
         with tabs[1]:
-            components.html(cast(str, spec_bundle["graph_svg"]), height=980)
+            st.html(cast(str, spec_bundle["graph_svg"]))
             with st.expander("View graph source"):
                 st.code(cast(str, spec_bundle["graph_source"]), language="text")
 
