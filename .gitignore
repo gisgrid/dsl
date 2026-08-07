@@ -8,3 +8,5 @@ dist/
 build/
 *.pyc
 *.egg-info/
+
+*副本*.drawio
